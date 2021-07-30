@@ -13,7 +13,7 @@ const createGame = require('./entity/Game');
 const createPlayer = require('./entity/Player');
 
 // Variável principal que contém todas as informações do jogo
-const Game = createGame();
+const Game = createGame(io);
 
 io.on('connection', socket => {
     console.log(`Socket '${socket.id}' connected`)
