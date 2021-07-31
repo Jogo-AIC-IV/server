@@ -8,6 +8,7 @@ const io = require("socket.io")(server, { cors: { origin: "*", } });
 
 const MatchEvents = require('./events/Match');
 const UserEvents = require('./events/User');
+const TowerEvents = require('./events/Tower');
 
 const createGame = require('./entity/Game');
 const createPlayer = require('./entity/Player');
@@ -25,6 +26,7 @@ io.on('connection', socket => {
     const eventHandlers = {
         match: new MatchEvents(Game, socket),
         user:  new UserEvents(Game, socket),
+        tower: new TowerEvents(Game, socket),
     };
 
     // Linka o socket aos eventos

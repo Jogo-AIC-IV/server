@@ -1,12 +1,8 @@
 function createPlayer(socket, name) {
     return {
-        id: Math.floor(Math.random() * 5000),
+        id: socket.id,
         socket,
         name,
-        life: 100,
-        dices: {
-            '123': 1,
-        }
     }
 }
 

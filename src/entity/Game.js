@@ -9,6 +9,7 @@ function createGame(mainSocket) {
         playersOnline: {},
         playersSearching: {},
         matches: {},
+        inMatch: {},
 
         getRandomPlayerSearching: function(blacklistId = null) {
             if (debug) {
@@ -44,12 +45,29 @@ function createGame(mainSocket) {
         },
 
         startMatch: function(firstPlayer, secondPlayer) {
-            const match = createMatch(firstPlayer, secondPlayer);
+            const match = createMatch({...firstPlayer}, {...secondPlayer});
         
+            this.inMatch[firstPlayer.socket.id] = match.id;
+            this.inMatch[secondPlayer.socket.id] = match.id;
+
             this.matches[match.id] = match;
             
             return match;
         },
+
+        start: function() {
+            this.update();
+        },
+
+        update: function() {
+            for (let matchId in this.matches) {
+                this.matches[matchId].runTurn();
+            
+                
+            }
+
+            this.update();
+        }
     }
 }
 
