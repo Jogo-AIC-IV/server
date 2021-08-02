@@ -53,6 +53,7 @@ function search({ getNPC }) {
     this.game.io.to(match.id).emit('SETUP_MATCH', match.state)
 
     delete this.game.playersSearching[this.socket.id];
+    delete this.game.playersSearching[enemy.socket.id];
 }
 
 function stop() {
