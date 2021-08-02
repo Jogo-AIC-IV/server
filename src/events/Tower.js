@@ -18,15 +18,17 @@ function add() {
     const socketId = this.socket.id;
     const matchId = this.game.inMatch[socketId];
     const match = this.game.matches[matchId];
+    const playerKey = match.state.first_player.id == socketId ? 'first_player' : 'second_player';
+    const player = match.state[playerKey];
 
     const tower = createTower();
 
-    if (!match.state[socketId])
+    if (!player) {
+        console.log(`'${socketId}' não faz parte dessa partida.`)
         return this.socket.emit('ERROR', 'Esse jogador não faz parte dessa partida.');
+    }
 
-    match.state[socketId].towers.list.push(tower);
-
-    this.game.matches[matchId] = match;
+    player.towers.list.push(tower);
 
     this.game.io.to(matchId).emit('TOWER_ADDED', { 
         player: this.socket.id, 
@@ -65,11 +67,7 @@ function combine(firstTowerId, secondTowerId) {
 
     match.total_tier += 1;
     
-    towerDestroy.destroy();
     matchPlayer.towers.list.splice(indexTowerDestroy, 1);
-
-    match.state[socketId] = matchPlayer;
-    this.game.matches[matchId] = match;
 
     this.game.io.to(matchId).emit('TOWER_COMBINED', { 
         player: this.socket.id, 
