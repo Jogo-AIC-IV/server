@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require('../database');
 
 const userSchema = new mongoose.Schema({
     username: {
@@ -8,12 +8,19 @@ const userSchema = new mongoose.Schema({
     },
     name: {
         type: String,
-        required: true,
     },
     password: {
         type: String,
         required: true,
-        select: false,
+    },
+    money: {
+        type: Number,
+        default: 0,
+        required: true,
+    },
+    towerTypes: {
+        type: [String],
+        default: []
     },
     createdAt: {
         type: Date,

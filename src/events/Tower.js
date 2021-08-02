@@ -25,7 +25,7 @@ function add() {
 
     if (!player) {
         console.log(`'${socketId}' não faz parte dessa partida.`)
-        return this.socket.emit('ERROR', 'Esse jogador não faz parte dessa partida.');
+        return this.socket.emit('ERROR', { type: 'tower', message: 'Esse jogador não faz parte dessa partida.' });
     }
 
     player.towers.list.push(tower);
@@ -51,11 +51,11 @@ function combine(firstTowerId, secondTowerId) {
     let towerUpgrade = matchPlayer.towers.list[indexTowerUpgrade];
     
     if (!towerDestroy || !towerUpgrade) {
-        return this.socket.emit('ERROR', { message: 'O jogador não possui essas torres.' });
+        return this.socket.emit('ERROR', { type: 'tower', message: 'O jogador não possui essas torres.' });
     }
 
     if (towerDestroy.tier != towerUpgrade.tier) {
-        return this.socket.emit('ERROR', { message: 'Torres com tiers diferentes não podem ser combinadas.' });
+        return this.socket.emit('ERROR', { type: 'tower', message: 'Torres com tiers diferentes não podem ser combinadas.' });
     }
 
     towerUpgrade.bullets.damage += 1;

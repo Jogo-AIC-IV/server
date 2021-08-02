@@ -13,18 +13,19 @@ const UserEvents = require('./events/User');
 const TowerEvents = require('./events/Tower');
 
 const createGame = require('./entity/Game');
-const createPlayer = require('./entity/Player');
+const createUser = require('./entity/User');
 
 // Variável principal que contém todas as informações do jogo
 const Game = createGame(io);
 
-io.on('connection', socket => {
+Game.start();
+
+io.on('connection', async (socket) => {
     console.log(`Socket '${socket.id}' connected`)
 
-    // Cria um player com um nome aleatório
-    Game.playersOnline[socket.id] = createPlayer(socket, (Math.random() + 1).toString(36).substring(5));
-
-    socket.emit('SETUP', { connection: true });
+    const setup = await Game.getSetup();
+    
+    socket.emit('SETUP', { connected: true, setup });
 
     // Todas categorias dos eventos 
     const eventHandlers = {
