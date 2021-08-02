@@ -1,4 +1,6 @@
-function createTower() {
+const { v4: uuidv4 } = require('uuid');
+
+function createTower(typeId = null) {
 
     // Range da posição
     // x: 0px - 800px
@@ -6,8 +8,8 @@ function createTower() {
     // angle: 0 - 2pi
 
     return {
-        id: Math.floor(Math.random() * 1000),
-        level: 1,
+        id: uuidv4(),
+        tier: 1,
         price: 300,
         color: [255, 255, 255],
         range: 900,
@@ -16,13 +18,7 @@ function createTower() {
             y: 50,
             angle: 2,
         },
-        bullets: {
-            buffer_cur: 0,
-            buffer_max: 50,
-            size: 10,
-            speed: 20,
-            damage: 1
-        }
+        type_id: typeId || 'xxx'
     }
 }
 

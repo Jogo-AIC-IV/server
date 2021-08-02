@@ -1,6 +1,6 @@
 const createMatch = require('./Match')
 
-const debug = true;
+const debug = false;
 
 function createGame(mainSocket) {
 
@@ -8,10 +8,10 @@ function createGame(mainSocket) {
         io: mainSocket,
         playersOnline: {},
         playersSearching: {},
-        matches: {},
-        inMatch: {},
+        matches: {},      // Todas as partidas que estão em execução no momento
+        inMatch: {},      // Mapeamento dos dois sockets dos players para o id da partida
 
-        getRandomPlayerSearching: function(blacklistId = null) {
+        getRandomPlayerSearching: function(blacklistId = null, indexBlacklist = null) {
             if (debug) {
                 console.log('\n\n');
                 for (let socketId in this.playersSearching) {
@@ -33,14 +33,15 @@ function createGame(mainSocket) {
             }
         
             // Index é um valor de 0 até totalPlayersSearching
-            const index = Math.floor(Math.random() * (totalPlayersSearching + 1));
-            const socketId = socketIds[index];
-        
+            let index = Math.floor(Math.random() * (totalPlayersSearching + 1));
+            let socketId = socketIds[index];
+
             // Se pegou ele mesmo, refaz
-            if (blacklistId && blacklistId == socketId) {
-                this.getRandomPlayerSearching(blacklistId);
+            while (blacklistId && blacklistId == socketId) {
+                index = Math.floor(Math.random() * (totalPlayersSearching + 1));
+                socketId = socketIds[index];
             }
-        
+
             return this.playersOnline[socketId];
         },
 
@@ -62,11 +63,17 @@ function createGame(mainSocket) {
         update: function() {
             for (let matchId in this.matches) {
                 this.matches[matchId].runTurn();
-            
+                
                 
             }
 
             this.update();
+        },
+
+        // Helpers
+
+        playerIsInMatch(socketId) {
+            return this.inMatch[socketId];
         }
     }
 }

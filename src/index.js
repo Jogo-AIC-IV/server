@@ -6,6 +6,8 @@ const http = require('http');
 const server = http.createServer(app);
 const io = require("socket.io")(server, { cors: { origin: "*", } });
 
+const port = 3005;
+
 const MatchEvents = require('./events/Match');
 const UserEvents = require('./events/User');
 const TowerEvents = require('./events/Tower');
@@ -21,6 +23,8 @@ io.on('connection', socket => {
 
     // Cria um player com um nome aleatório
     Game.playersOnline[socket.id] = createPlayer(socket, (Math.random() + 1).toString(36).substring(5));
+
+    socket.emit('SETUP', { connection: true });
 
     // Todas categorias dos eventos 
     const eventHandlers = {
@@ -38,6 +42,6 @@ io.on('connection', socket => {
     }
 });
 
-server.listen(3000, () => {
-    console.log(`listening on localhost:3000`);
+server.listen(port, () => {
+    console.log(`listening on localhost:${port}`);
 });

@@ -14,6 +14,8 @@ function disconnect() {
     
     delete this.game.playersOnline[this.socket.id]
     delete this.game.playersSearching[this.socket.id]
+
+    console.log(this.game.matches);
 }
 
 module.exports = User;
