@@ -1,3 +1,5 @@
+const Colors = require('../constants/TerminalColors');
+
 const Match = function (game, socket) {
     this.game = game;
     this.socket = socket;
@@ -12,19 +14,25 @@ const Match = function (game, socket) {
 // Events
 
 function search() {
-    console.log(`Socket '${this.socket.id}' start searching`);
+    const player = this.game.getPlayerBySocketId(this.socket.id);
+
+    Colors.printColored('FgGreen', `Player '${player.username}' started searching`);
 
     this.game.searchMatch(this.socket.id);
 }
 
 function stop() {
-    console.log(`Socket '${this.socket.id}' stop searching`);
+    const player = this.game.getPlayerBySocketId(this.socket.id);
+
+    Colors.printColored('FgGreen', `Player '${player.username}' stopped searching`);
 
     delete this.game.playersSearching[this.socket.id];
 }
 
 function quit() {
-    console.log(`Socket '${this.socket.id}' quit match`);
+    const player = this.game.getPlayerBySocketId(this.socket.id);
+
+    Colors.printColored('FgYellow', `Player '${player.username}' quited searching`);
 
     const matchId = this.game.inMatch[this.socket.id];
 

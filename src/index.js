@@ -11,9 +11,9 @@ const port = 3005;
 const MatchEvents = require('./events/Match');
 const UserEvents = require('./events/User');
 const TowerEvents = require('./events/Tower');
+const EnemyEvents = require('./events/Enemy');
 
 const createGame = require('./entity/Game');
-const createUser = require('./entity/User');
 
 // Variável principal que contém todas as informações do jogo
 const Game = createGame(io);
@@ -32,6 +32,7 @@ io.on('connection', async (socket) => {
         match: new MatchEvents(Game, socket),
         user:  new UserEvents(Game, socket),
         tower: new TowerEvents(Game, socket),
+        enemy: new EnemyEvents(Game, socket),
     };
 
     // Linka o socket aos eventos

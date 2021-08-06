@@ -1,9 +1,12 @@
 const { v4: uuidv4 } = require('uuid');
+const Colors = require('../constants/TerminalColors');
 
 function createMatch(firstPlayer, secondPlayer, tick = 0) {
 
     const match = {
         id: uuidv4(),
+        startTick: 0,
+        wave: 1,
         state: {
             first_player: createMatchPlayer(firstPlayer),
             second_player: createMatchPlayer(secondPlayer),
@@ -11,6 +14,12 @@ function createMatch(firstPlayer, secondPlayer, tick = 0) {
 
         runTurn: function(gameTick) {
             console.log(`Ticking match '${this.id}' tick ${gameTick}`);
+
+            if (this.startTick > 0) {
+                console.log(`Iniciando partida '${this.id}' em ${this.startTick} ticks`);
+                this.startTick--;
+                return;
+            }
 
             const firstPlayer = this.state.first_player;
             const secondPlayer = this.state.second_player;
@@ -20,23 +29,36 @@ function createMatch(firstPlayer, secondPlayer, tick = 0) {
         },
 
         runPlayerTurn: function(player, gameTick) {
-            // console.log(`Running player '${player.id}' tick`);
-
             for (let i=0; i<player.towers.list.length; i++) {
                 const tower = player.towers.list[i];
 
-                console.log(`Tower:\n\trate:\t${tower.towerType.rate}\n\tTower damange:\t${tower.towerType.bullet.damage}`);
+                Colors.printColored('FgGreen', `\nTicking '${player.username}' tower`);
+
+                Colors.printColored('FgGreen', `\n   Tower:\t`);
+                console.log(`\tFire Rate:\t${tower.towerType.rate}`);
+                console.log(`\tPosition:\t${tower.position.x}, ${tower.position.y}`);
+                console.log(`\tDamage:\t${tower.towerType.bullet.damage}`);
+                if (tower.target) {
+                    Colors.printColored('FgGreen', `\tTarget:\t${tower.target.name}`);
+                } else {
+                    console.log(`\tTarget:\t${tower.target ? tower.target.name : null}`);
+                }
 
                 if (gameTick % tower.towerType.rate == 0) {
-                    const enemy = tower.findTarget(player.enemies.list);
+                    if (!tower.target || tower.targetIsInRange() == false) {
+                        Colors.printColored(`FgRed`, `\t\tSearching target...`);
+                        tower.findTarget(player.enemies.list);
+                    }
 
-                    if (enemy) {
-                        console.log(`Enemy: ${enemy.id}`);
-
+                    if (tower.target) {
                         tower.doDamage();
+                        tower.applyEffect();
     
-                        if (enemy.isDead())
-                            enemy.reset();
+                        if (tower.target.isDead()) {
+                            Colors.printColored('FgRed', `\nTarget '${tower.target.name}' died`);
+                            tower.target.reset();
+                            tower.target = null;
+                        }
                     } 
                 }
             }
@@ -44,22 +66,22 @@ function createMatch(firstPlayer, secondPlayer, tick = 0) {
             for (let j=0; j<player.enemies.list.length; j++) {
                 const enemy = player.enemies.list[j];
 
-                enemy.moveToNextPathUsingSpeed();
+                Colors.printColored('FgCyan', `\nTicking '${player.username}' enemy '${enemy.name}'`);
 
-                console.log(`Enemy:\n\tEnemyId:\t${enemy.id}\n\tCurrent Path:\t${enemy.currentPathIndex}\n\tPosition:\tX:${enemy.position.x} Y:${enemy.position.y}\n`);
+                enemy.tickEffects();
+                enemy.moveToNextPathUsingSpeed();
             }
         },
 
-        addEnemy: function(socketId, enemy) {
-            const playerKey = this.state.first_player.id == socketId ? 'first_player' : 'second_player';
+        addEnemy: function(playerId, enemy) {
+            const playerKey = this.state.first_player.id == playerId ? 'first_player' : 'second_player';
 
             this.state[playerKey].enemies.count++;
-            this.state[playerKey].enemies.first++;
             this.state[playerKey].enemies.list.push(enemy);
         },
 
-        removeEnemy: function(socketId, enemyId) {
-            const playerKey = this.state.first_player.id == socketId ? 'first_player' : 'second_player';
+        removeEnemy: function(playerId, enemyId) {
+            const playerKey = this.state.first_player.id == playerId ? 'first_player' : 'second_player';
             const enemies = this.state[playerKey].enemies;
 
             for (let i=0; i<enemies.list.length; i++) {
@@ -72,10 +94,19 @@ function createMatch(firstPlayer, secondPlayer, tick = 0) {
             }
         },
 
-        addTower: function(socketId, tower) {
-            const playerKey = this.state.first_player.id == socketId ? 'first_player' : 'second_player';
+        addTower: function(playerId, tower) {
+            const playerKey = this.state.first_player.id == playerId ? 'first_player' : 'second_player';
 
             this.state[playerKey].towers.list.push(tower);
+        },
+
+        getRandomTowerType: function(player) {
+            const totalTowerTypes = player.towerTypes.length;
+            
+            // Index é um valor de 0 até totalTowerTypes
+            const index = Math.floor(Math.random() * totalTowerTypes);
+
+            return player.towerTypes[index];
         }
     }
 
@@ -84,16 +115,16 @@ function createMatch(firstPlayer, secondPlayer, tick = 0) {
 
 function createMatchPlayer(player) {
     return {
-        id: player.id,
+        id: player._id,
         username: player.username,
         name: player.name,
+        towerTypes: player.towerTypes,
         life: 3,
         price: 100,
         money: 350,
         total_tier: 0,
         enemies: {
             count: 0,
-            first: 0,
             list: []
         },
         towers: {

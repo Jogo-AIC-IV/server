@@ -1,3 +1,4 @@
+const Colors = require('../constants/TerminalColors');
 const createTower = require('../entity/Tower');
 
 const Tower = function (game, socket) {
@@ -13,25 +14,32 @@ const Tower = function (game, socket) {
 // Events
 
 function add() {
-    console.log(`Socket '${this.socket.id}' add tower`);
-
     const socketId = this.socket.id;
     const matchId = this.game.inMatch[socketId];
     const match = this.game.matches[matchId];
-    const playerKey = match.state.first_player.id == socketId ? 'first_player' : 'second_player';
-    const player = match.state[playerKey];
+    const player = this.game.getPlayerBySocketId(socketId);
+    const playerKey = match.state.first_player.id == player._id ? 'first_player' : 'second_player';
+    const matchPlayer = match.state[playerKey];
 
-    const tower = createTower();
-
-    if (!player) {
+    if (!matchPlayer) {
         console.log(`'${socketId}' não faz parte dessa partida.`)
         return this.socket.emit('ERROR', { type: 'tower', message: 'Esse jogador não faz parte dessa partida.' });
     }
+    
+    const towerType = match.getRandomTowerType(matchPlayer);
+    const tower = createTower(towerType);
 
-    player.towers.list.push(tower);
+    Colors.printColored('FgCyan', `\tPlayer '${matchPlayer.username}' added tower`);
+    Colors.printColored('FgCyan', `\tTowerType '${towerType.effect}' generated`);
+    Colors.printColored('FgCyan', `\tTower '${tower.id}' generated`);
+
+    matchPlayer.towers.list.push(tower);
 
     this.game.io.to(matchId).emit('TOWER_ADDED', { 
-        player: this.socket.id, 
+        player: {
+            id: matchPlayer.id,
+            name: matchPlayer.name
+        },
         tower
     })
 }

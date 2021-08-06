@@ -1,6 +1,8 @@
 const { v4: uuidv4 } = require('uuid');
+const Effects = require('../constants/Effects');
+const Colors = require('../constants/TerminalColors');
 
-function createTower(typeId = null) {
+function createTower(towerType = null) {
 
     // Range da posição
     // x: 0px - 800px
@@ -16,10 +18,10 @@ function createTower(typeId = null) {
             y: 50,
             angle: 2,
         },
-        towerType: {
+        towerType: towerType || {
             price: 300,
             range: 900,
-            rate: 50,
+            rate: 3,
             color: [255, 255, 255],
             bullet: {
                 size: 5,
@@ -28,19 +30,33 @@ function createTower(typeId = null) {
                 duration: 10,
             }
         },
+        effects: {},
 
         enemyIsInRange: function(enemy) {
-            const distX  = this.position.x - enemy.position.x;
-            const distY  = this.position.y - enemy.position.y;
+            const distX  = this.position.x - enemy.position.current.x;
+            const distY  = this.position.y - enemy.position.current.y;
             const distTotal  = Math.sqrt( Math.pow(distX, 2) + Math.pow(distY, 2));
             
             return distTotal > this.towerType.range;
         },
 
+        targetIsInRange: function() {
+            const distX  = this.position.x - this.target.position.current.x;
+            const distY  = this.position.y - this.target.position.current.y;
+            const distTotal  = Math.sqrt( Math.pow(distX, 2) + Math.pow(distY, 2));
+
+            return distTotal < this.towerType.range;
+        },
+
+        setTarget: function(enemy) {
+            this.target = enemy;
+        },
+
         findTarget: function(enemies) {
             const index = enemies.findIndex(enemy => {
-                let distance = Math.sqrt( Math.pow((this.position.x - enemy.position.x), 2) + Math.pow((this.position.y - enemy.position.y), 2));
-                return distance <= TouchList.towerType.range;
+                const distance = Math.sqrt( Math.pow((this.position.x - enemy.position.current.x), 2) + Math.pow((this.position.y - enemy.position.current.y), 2));
+                console.log(`\tTarget:\t${enemy.name},\tDistance: ${distance}`);
+                return distance <= this.towerType.range;
             });
 
             if (index != -1) {
@@ -51,8 +67,18 @@ function createTower(typeId = null) {
         },
 
         doDamage: function() {
-            if (this.target)
-                this.target.life.current -= this.towerType.bullet.damage;
+            this.target.life.current -= this.towerType.bullet.damage;
+        },
+
+        applyEffect: function() {
+            const effectName = this.towerType.effect;
+            const effect = {...Effects[effectName]};
+
+            if (!effect) {
+                return console.log(`Effect '${effectName}' não existe`);
+            }
+
+            effect.apply(this.target);
         },
 
         getTarget: function() {

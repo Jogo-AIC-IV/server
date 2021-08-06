@@ -1,7 +1,8 @@
 const createMatch = require('./Match')
-const { TowerType } = require('../models/TowerType');
-const Tower = require('../events/Tower');
+const TowerTypeModel = require('../models/TowerType');
 const createEnemy = require('./Enemy');
+const Effects = require('../constants/Effects');
+const Colors = require('../constants/TerminalColors');
 
 const debug = false;
 
@@ -10,14 +11,14 @@ function createGame(mainSocket) {
     return {
         io: mainSocket,
         tick: 0,
-        tickRate: 2000,               // Tempo em ms de cada tick
+        tickRate: 1000,               // Tempo em ms de cada tick
         playersOnline: {},            // socketId => player
         playersSearching: {},         // socketId => player
+        playerMap: {},                // playerId => socket
         matches: {},                  // Todas as partidas que estão em execução no momento. matchId => match
         inMatch: {},                  // Mapeamento dos dois sockets dos players para o id da partida. socketId => matchId
-        intervalId: null,
 
-        getRandomPlayerSearching: function(blacklistId = null, indexBlacklist = null) {
+        getRandomPlayerSearching: function(blacklistId = null) {
             if (debug) {
                 console.log('\n\n');
                 for (let socketId in this.playersSearching) {
@@ -52,31 +53,45 @@ function createGame(mainSocket) {
         },
 
         getSetup: async function() {
-            const towerTypes = await TowerType.find().exec()
-        
+            const towerTypes = await TowerTypeModel.find().exec()
+
             return {
                 tower_types: towerTypes,
             };
         },
 
         startMatch: function(firstPlayer, secondPlayer) {
-            const match = createMatch({...firstPlayer}, {...secondPlayer});
+            const match = createMatch(firstPlayer, secondPlayer);
         
-            this.inMatch[firstPlayer.socket.id] = match.id;
-            this.inMatch[secondPlayer.socket.id] = match.id;
+            const firstPlayerSocketId = this.playerMap[firstPlayer._id].id;
+            const secondPlayerSocketId = this.playerMap[secondPlayer._id].id;
+
+            this.inMatch[firstPlayerSocketId] = match.id;
+            this.inMatch[secondPlayerSocketId] = match.id;
+
+            console.log("\nIn match:");
+            console.log(this.inMatch)
+            console.log('\n');
 
             this.matches[match.id] = match;
 
-            match.state.first_player.enemies.list.push(createEnemy());
-            
+            const npcEnemy = createEnemy();
+            npcEnemy.effects['slow'] = {...Effects.slow};
+            npcEnemy.effects['slow'].apply(npcEnemy);
+
+            console.log(`\tCreating enemy ${npcEnemy.name}`);
+
+            match.addEnemy(firstPlayer._id, npcEnemy);
+
             return match;
         },
 
         searchMatch: function(socketId) {
-            const player = this.playersOnline[socketId];
-            
+            const player = this.getPlayerBySocketId(socketId);
+            const playerSocket = this.getSocketByPlayerId(player._id);
+
             if (this.playerIsInMatch(socketId)) {
-                return player.socket.emit('ERROR', { type: "match", message: "O jogador já está em uma partida." });
+                return playerSocket.emit('ERROR', { type: "match", message: "O jogador já está em uma partida." });
             }
 
             this.playersSearching[socketId] = player;
@@ -85,25 +100,28 @@ function createGame(mainSocket) {
         
             if (!enemy) {
                 console.log(`Search '${socketId}' not found enemy`);
-                return player.socket.emit('ERROR', { type: 'search', message: 'Nenhum jogador encontrado.' });
+                return playerSocket.emit('ERROR', { type: 'search', message: 'Nenhum jogador encontrado.' });
             }
 
-            console.log(`'${player.id}' Found enemy '${enemy.id}'`);
+            const enemySocket = this.getSocketByPlayerId(enemy._id);
 
-            const match = this.startMatch({...player}, {...enemy});
-            const NPCEnemy = createEnemy();
+            console.log(`'${playerSocket.id}' Found enemy '${enemySocket.id}'`);
 
-            match.addEnemy(socketId, NPCEnemy);
-        
+            const match = this.startMatch(player, enemy);
             this.matches[match.id] = match;
         
-            player.socket.join(match.id);
-            enemy.socket.join(match.id);
+            playerSocket.join(match.id);
+            enemySocket.join(match.id);
+
+            const setup = {
+                first_player: player,
+                second_player: enemy
+            }
         
-            this.io.to(match.id).emit('SETUP_MATCH', match.state)
+            this.io.to(match.id).emit('FOUND_MATCH', setup)
         
-            delete this.playersSearching[player.socket.id];
-            delete this.playersSearching[enemy.socket.id];
+            delete this.playersSearching[playerSocket.id];
+            delete this.playersSearching[playerSocket.id];
         },
 
         finishMatch: function(matchId) {
@@ -112,33 +130,31 @@ function createGame(mainSocket) {
             const match = this.matches[matchId];
             const firstPlayerId = match.state.first_player.id;
             const secondPlayerId = match.state.second_player.id;
-            const firstPlayer = this.playersOnline[firstPlayerId];
-            const secondPlayer = this.playersOnline[secondPlayerId];
 
-            console.log(`Removing '${firstPlayer.username}' from match ${matchId}`);
-            console.log(`Removing '${secondPlayer.username}' from match ${matchId}`);
+            const firstPlayerSocket = this.getSocketByPlayerId(firstPlayerId);
+            const secondsPlayerSocket = this.getSocketByPlayerId(secondPlayerId);
 
             this.io.to(matchId).emit('FINISH_MATCH', { quit: true });
 
-            firstPlayer.socket.leave(matchId);
-            secondPlayer.socket.leave(matchId);
+            firstPlayerSocket.leave(matchId);
+            secondsPlayerSocket.leave(matchId);
 
-            delete this.inMatch[firstPlayerId];
-            delete this.inMatch[secondPlayerId];
+            delete this.inMatch[firstPlayerSocket.id];
+            delete this.inMatch[secondsPlayerSocket.id];
             delete this.matches[matchId];
         },
 
         start: function() {
-            console.log(`Starting game`);
+            Colors.printColored('FgMagenta', 'Starting game');
 
             var that = this
-            this.intervalId = setInterval(() => {
+            setInterval(function() {
                 that.update();
             }, that.tickRate);
         },
 
         update: function() {
-            console.log(`Runing a game tick`);
+            // console.log(`Runing a game tick`);
 
             for (let matchId in this.matches) {
                 this.matches[matchId].runTurn(this.tick);
@@ -152,8 +168,16 @@ function createGame(mainSocket) {
 
         // Helpers
 
-        playerIsInMatch(socketId) {
+        playerIsInMatch: function(socketId) {
             return this.inMatch[socketId];
+        },
+
+        getPlayerBySocketId: function(socketId) {
+            return this.playersOnline[socketId];
+        },
+
+        getSocketByPlayerId: function(playerId) {
+            return this.playerMap[playerId];
         }
     }
 }

@@ -1,4 +1,6 @@
+const Colors = require("../constants/TerminalColors");
 const createUser = require("../entity/User");
+const UserService = require('../service/User')();
 
 const User = function (game, socket) {
     this.game = game;
@@ -14,7 +16,7 @@ const User = function (game, socket) {
 // Events
 
 async function login({ username, password }) {
-    console.log(`Usuário ${username} com senha ${password} tentando logar`);
+    Colors.printColored('FgGreen', `Usuário '${username}' com senha '${password}' tentando logar`);
 
     // Verifica se o player está online 
     for (let socketId in this.game.playersOnline) {
@@ -23,49 +25,58 @@ async function login({ username, password }) {
         }    
     }
 
-    const player = createUser(this.socket);
+    const user = await UserService.login(username, password);
 
-    const isValid = await player.login(username, password);
-
-    if (isValid) {
-        this.game.playersOnline[this.socket.id] = player;
-
-        return this.socket.emit('INFO', { status: true, message: 'Login realizado com sucesso.' });
+    if (!user) {
+        return this.socket.emit('ERROR', { type: 'player', message: 'Username ou senha incorretos.' });
     }
 
-    return this.socket.emit('ERROR', { type: 'player', message: 'Username ou senha incorretos.' });
+    this.game.playerMap[user._id] = this.socket;
+    this.game.playersOnline[this.socket.id] = user;
+
+    return this.socket.emit('INFO', { status: true, message: 'Login realizado com sucesso.' });
 }
 
-async function signup({username, password}) {
-    console.log(`Usuário ${username} com senha ${password} tentando cadastrar`);
+async function signup(data) {
+    Colors.printColored('FgGreen', `Usuário '${data.username}' com senha '${data.password}' tentando cadastrar`);
 
     // Verifica se o player está online 
     for (let socketId in this.game.playersOnline) {
-        if (this.game.playersOnline[socketId].username == username) {
+        if (this.game.playersOnline[socketId].username == data.username) {
             return this.socket.emit('ERROR', { type: 'player', message: 'Esse usuário já existe e está logado.' });
         }    
     }
 
-    const player = createUser(this.socket);
+    const user = await UserService.signup(data);
 
-    const isValid = await player.signUp(username, password);
-
-    if (isValid) {
-        this.game.playersOnline[this.socket.id] = player;
-
-        console.log(this.game.playersOnline);
-
-        return this.socket.emit('INFO', { status: true, message: 'Cadastro realizado com sucesso.' });
+    if (!user) {
+        return this.socket.emit('ERROR', { type: 'player', message: 'Esse usuário já existe.' });
     }
 
-    return this.socket.emit('ERROR', { type: 'player', message: 'Esse usuário já existe.' });
+    this.game.playerMap[user.id] = this.socket;
+    this.game.playersOnline[this.socket.id] = user;
+
+    return this.socket.emit('INFO', { status: true, message: 'Cadastro realizado com sucesso.' });
 }
 
 function disconnect() {
-    console.log(`Player '${this.socket.id}' disconnected`);
+    Colors.printColored('FgRed', `Socket '${this.socket.id}' disconnected`);
+
+    const user = this.game.getPlayerBySocketId(this.socket.id);
+    const matchId = this.game.inMatch[this.socket.id];
+
+    if (user) {
+        Colors.printColored('FgRed', `Disconnecting player '${user.username}'`);
+        delete this.game.playerMap[user.id];
+    }
+
+    if (matchId) {
+        Colors.printColored('FgRed', `Finishing match '${matchId}'`);
+        this.game.finishMatch(matchId);
+    }
     
-    delete this.game.playersOnline[this.socket.id]
-    delete this.game.playersSearching[this.socket.id]
+    delete this.game.playersOnline[this.socket.id];
+    delete this.game.playersSearching[this.socket.id];
 
     console.log(this.game.matches);
 }

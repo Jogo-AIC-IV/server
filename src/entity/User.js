@@ -10,6 +10,10 @@ function createUser(socket) {
         password: null,
         towerTypes: [],
 
+        addTowerType: function(towerType) {
+            this.towerTypes.push(towerType);
+        },
+
         encryptPassword: function(password) {
             this.password = bcrypt.hashSync(password, 8);
 

@@ -1,12 +1,16 @@
 const mongoose = require('../database');
 
 const TowerTypeSchema = new mongoose.Schema({
-    // name: {
-    //     type: String,
-    //     default: 'Torre pica',
-    //     unique: true,
-    //     required: true
-    // },
+    name: {
+        type: String,
+        default: 'Mage',
+        required: true
+    },
+    effect: {
+        type: String,
+        default: 'slow',
+        required: true
+    },
     price: {
         type: Number,
         default: 300,
@@ -45,4 +49,5 @@ TowerTypeSchema.set('toObject', { virtuals: true, versionKey: false, transform: 
 
 const TowerType = mongoose.model('TowerType', TowerTypeSchema);
 
-module.exports = { TowerType, TowerTypeSchema };
+
+module.exports = TowerType;
