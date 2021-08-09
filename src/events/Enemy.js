@@ -16,22 +16,25 @@ function add() {
 
     const socketId = this.socket.id;
     const matchId = this.game.inMatch[socketId];
-    const player = this.game.getPlayerBySocketId(socketId);
+    const match = this.game.matches[matchId]
+    const player = this.game.getPlayerInMatchBySocketId(matchId, socketId);
 
     if (!player) {
         console.log(`'${socketId}' não faz parte dessa partida.`)
         return this.socket.emit('ERROR', { type: 'enemy', message: 'Esse jogador não faz parte dessa partida.' });
     }
+
+    const enemy = createEnemy('Mage');
     
-    const enemy = createEnemy();
+    match.addEnemy(player.id, enemy);
 
-    console.log(`Enemy '${enemy.id}' generated`);
-
-    player.enemies.list.push(enemy);
-    player.enemies.count++;
+    console.log(`\tCreating enemy ${enemy.name}`);
 
     this.game.io.to(matchId).emit('ENEMY_ADDED', { 
-        player: this.socket.id, 
+        player: {
+            id: player.id,
+            username: player.username,
+        }, 
         enemy
     })
 }

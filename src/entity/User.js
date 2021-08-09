@@ -8,7 +8,8 @@ function createUser(socket) {
         name: null,
         username: null,
         password: null,
-        towerTypes: [],
+        unlockedTowerTypes: [],
+        selectedTowerTypes: [],
 
         addTowerType: function(towerType) {
             this.towerTypes.push(towerType);
@@ -35,10 +36,12 @@ function createUser(socket) {
 
                 console.log(`Usuário: ${user.username}, ${user.name}, ${user.password}`);
 
+                this.id = user._id;
                 this.name = user.name;
                 this.username = user.username;
                 this.password = user.password;
-                this.towerTypes = user.towerTypes;
+                this.unlockedTowerTypes = user.unlockedTowerTypes;
+                this.selectedTowerTypes = user.selectedTowerTypes;
             } catch (error) {
                 console.error(error);
                 console.log('Falha ao pegar um usuário');

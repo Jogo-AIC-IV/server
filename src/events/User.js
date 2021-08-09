@@ -34,7 +34,7 @@ async function login({ username, password }) {
     this.game.playerMap[user._id] = this.socket;
     this.game.playersOnline[this.socket.id] = user;
 
-    return this.socket.emit('INFO', { status: true, message: 'Login realizado com sucesso.' });
+    return this.socket.emit('INFO', { status: true, message: user });
 }
 
 async function signup(data) {

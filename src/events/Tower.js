@@ -8,6 +8,7 @@ const Tower = function (game, socket) {
     this.handler = {
         ADD_TOWER:     add.bind(this),
         COMBINE_TOWER: combine.bind(this),
+        SELECT_TOWER_TYPES: selectTowerTypes.bind(this),
     };
 }
 
@@ -17,28 +18,29 @@ function add() {
     const socketId = this.socket.id;
     const matchId = this.game.inMatch[socketId];
     const match = this.game.matches[matchId];
-    const player = this.game.getPlayerBySocketId(socketId);
-    const playerKey = match.state.first_player.id == player._id ? 'first_player' : 'second_player';
-    const matchPlayer = match.state[playerKey];
+    const player = this.game.getPlayerInMatchBySocketId(matchId, socketId);
 
-    if (!matchPlayer) {
+    if (!player) {
         console.log(`'${socketId}' não faz parte dessa partida.`)
         return this.socket.emit('ERROR', { type: 'tower', message: 'Esse jogador não faz parte dessa partida.' });
     }
     
-    const towerType = match.getRandomTowerType(matchPlayer);
-    const tower = createTower(towerType);
+    const positionX = Math.floor(Math.random() * 500)
+    const positionY = Math.floor(Math.random() * 250)
 
-    Colors.printColored('FgCyan', `\tPlayer '${matchPlayer.username}' added tower`);
+    const towerType = match.getRandomTowerType(player);
+    const tower = createTower(towerType, positionX, positionY);
+
+    Colors.printColored('FgCyan', `\tPlayer '${player.username}' added tower`);
     Colors.printColored('FgCyan', `\tTowerType '${towerType.effect}' generated`);
     Colors.printColored('FgCyan', `\tTower '${tower.id}' generated`);
 
-    matchPlayer.towers.list.push(tower);
+    player.towers.list.push(tower);
 
     this.game.io.to(matchId).emit('TOWER_ADDED', { 
         player: {
-            id: matchPlayer.id,
-            name: matchPlayer.name
+            id: player.id,
+            usename: player.username
         },
         tower
     })
@@ -50,13 +52,13 @@ function combine(firstTowerId, secondTowerId) {
     const socketId = this.socket.id;
     const matchId = this.game.inMatch[socketId];
     const match = this.game.matches[matchId];
-    const matchPlayer = match.state[socketId];
+    const player = this.game.getPlayerInMatchBySocketId(matchId, socketId);
 
-    let indexTowerDestroy = matchPlayer.towers.list.findIndex(tower => (tower.id == firstTowerId));
-    let indexTowerUpgrade = matchPlayer.towers.list.findIndex(tower => (tower.id == secondTowerId));
+    let indexTowerDestroy = player.towers.list.findIndex(tower => (tower.id == firstTowerId));
+    let indexTowerUpgrade = player.towers.list.findIndex(tower => (tower.id == secondTowerId));
 
-    let towerDestroy = matchPlayer.towers.list[indexTowerDestroy];
-    let towerUpgrade = matchPlayer.towers.list[indexTowerUpgrade];
+    let towerDestroy = player.towers.list[indexTowerDestroy];
+    let towerUpgrade = player.towers.list[indexTowerUpgrade];
     
     if (!towerDestroy || !towerUpgrade) {
         return this.socket.emit('ERROR', { type: 'tower', message: 'O jogador não possui essas torres.' });
@@ -66,19 +68,21 @@ function combine(firstTowerId, secondTowerId) {
         return this.socket.emit('ERROR', { type: 'tower', message: 'Torres com tiers diferentes não podem ser combinadas.' });
     }
 
-    towerUpgrade.bullets.damage += 1;
-    towerUpgrade.bullets.speed  += 3;
-    towerUpgrade.bullets.size   += 1;
-    towerUpgrade.bullets.buffer_max -= 8;
+    towerUpgrade.type.bullet.damage += 1;
+    towerUpgrade.type.bullet.speed  += 3;
+    towerUpgrade.type.bullet.size   += 1;
+    towerUpgrade.type.rate -= 1;
     towerUpgrade.tier += 1;
-    // towerUpgrade.sprite.tint = PIXI.utils.rgb2hex(TURRET_COLORS[towerUpgrade.tier]);
 
-    match.total_tier += 1;
+    match.totalTier += 1;
     
-    matchPlayer.towers.list.splice(indexTowerDestroy, 1);
+    player.towers.list.splice(indexTowerDestroy, 1);
 
     this.game.io.to(matchId).emit('TOWER_COMBINED', { 
-        player: this.socket.id, 
+        player: {
+            id: player.id,
+            username: player.username
+        }, 
         tower_upgrade: { 
             index: indexTowerUpgrade, 
             tower: towerUpgrade 
@@ -88,6 +92,13 @@ function combine(firstTowerId, secondTowerId) {
             tower: towerDestroy
         }
     })
+}
+
+
+function selectTowerTypes(towerTypesId) {
+    if (!towerTypesId) {
+        return console.log("sem tower types");
+    }
 }
 
 module.exports = Tower;

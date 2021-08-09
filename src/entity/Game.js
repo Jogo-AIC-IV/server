@@ -61,7 +61,7 @@ function createGame(mainSocket) {
         },
 
         startMatch: function(firstPlayer, secondPlayer) {
-            const match = createMatch(firstPlayer, secondPlayer);
+            const match = createMatch(this.io, firstPlayer, secondPlayer);
         
             const firstPlayerSocketId = this.playerMap[firstPlayer._id].id;
             const secondPlayerSocketId = this.playerMap[secondPlayer._id].id;
@@ -76,8 +76,6 @@ function createGame(mainSocket) {
             this.matches[match.id] = match;
 
             const npcEnemy = createEnemy();
-            npcEnemy.effects['slow'] = {...Effects.slow};
-            npcEnemy.effects['slow'].apply(npcEnemy);
 
             console.log(`\tCreating enemy ${npcEnemy.name}`);
 
@@ -178,6 +176,25 @@ function createGame(mainSocket) {
 
         getSocketByPlayerId: function(playerId) {
             return this.playerMap[playerId];
+        },
+
+        getPlayerInMatchById(matchId, playerId) {
+            const match = this.matches[matchId];
+
+            if (!match) 
+                return null;
+
+            const player = match.state.first_player.id == playerId ? match.state.first_player : match.state.second_player;
+            
+            return player;
+        },
+
+        getPlayerInMatchBySocketId(matchId, socketId) {
+            const match = this.matches[matchId];
+            const player = this.getPlayerBySocketId(socketId);
+            const matchPlayer = match.state.first_player.id == player._id ? match.state.first_player : match.state.second_player;
+
+            return matchPlayer;
         }
     }
 }

@@ -18,7 +18,11 @@ const userSchema = new mongoose.Schema({
         default: 0,
         required: true,
     },
-    towerTypes: {
+    unlockedTowerTypes: {
+        type: [String],
+        default: []
+    },
+    selectedTowerTypes: {
         type: [String],
         default: []
     },

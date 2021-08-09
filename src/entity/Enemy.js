@@ -1,10 +1,10 @@
 const { v4: uuidv4 } = require('uuid');
 const Colors = require('../constants/TerminalColors');
 
-function createEnemy() {
+function createEnemy(name = null) {
     const enemy = {
         id: uuidv4(),
-        name: 'Archer',
+        name: name || 'Default',
         level: 1,
         position: {
             start: null,

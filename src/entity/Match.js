@@ -1,10 +1,11 @@
 const { v4: uuidv4 } = require('uuid');
 const Colors = require('../constants/TerminalColors');
 
-function createMatch(firstPlayer, secondPlayer, tick = 0) {
+function createMatch(io, firstPlayer, secondPlayer, tick = 0) {
 
     const match = {
         id: uuidv4(),
+        io: io,
         startTick: 0,
         wave: 1,
         state: {
@@ -35,22 +36,37 @@ function createMatch(firstPlayer, secondPlayer, tick = 0) {
                 Colors.printColored('FgGreen', `\nTicking '${player.username}' tower`);
 
                 Colors.printColored('FgGreen', `\n   Tower:\t`);
-                console.log(`\tFire Rate:\t${tower.towerType.rate}`);
+                console.log(`\tFire Rate:\t${tower.type.rate}`);
                 console.log(`\tPosition:\t${tower.position.x}, ${tower.position.y}`);
-                console.log(`\tDamage:\t${tower.towerType.bullet.damage}`);
+                console.log(`\tDamage:\t${tower.type.bullet.damage}`);
                 if (tower.target) {
                     Colors.printColored('FgGreen', `\tTarget:\t${tower.target.name}`);
                 } else {
                     console.log(`\tTarget:\t${tower.target ? tower.target.name : null}`);
                 }
 
-                if (gameTick % tower.towerType.rate == 0) {
+                if (gameTick % tower.type.rate == 0) {
                     if (!tower.target || tower.targetIsInRange() == false) {
                         Colors.printColored(`FgRed`, `\t\tSearching target...`);
                         tower.findTarget(player.enemies.list);
                     }
 
                     if (tower.target) {
+
+                        this.io.to(this.id).emit('TOWER_SHOT', {
+                            tower: {
+                                id: tower.id,
+                                target: {
+                                    id: tower.target.id,
+                                    name: tower.target.name,
+                                    life: {
+                                        current: tower.target.life.current,
+                                        total: tower.target.life.total
+                                    } 
+                                }
+                            },
+                        })
+
                         tower.doDamage();
                         tower.applyEffect();
     
@@ -74,15 +90,15 @@ function createMatch(firstPlayer, secondPlayer, tick = 0) {
         },
 
         addEnemy: function(playerId, enemy) {
-            const playerKey = this.state.first_player.id == playerId ? 'first_player' : 'second_player';
+            const player = this.getPlayerById(playerId);
 
-            this.state[playerKey].enemies.count++;
-            this.state[playerKey].enemies.list.push(enemy);
+            player.enemies.list.push(enemy);
+            player.enemies.count++;
         },
 
         removeEnemy: function(playerId, enemyId) {
-            const playerKey = this.state.first_player.id == playerId ? 'first_player' : 'second_player';
-            const enemies = this.state[playerKey].enemies;
+            const player = this.getPlayerById(playerId);
+            const enemies = player.enemies;
 
             for (let i=0; i<enemies.list.length; i++) {
                 if (enemies.list[i].id == enemyId) {
@@ -95,19 +111,29 @@ function createMatch(firstPlayer, secondPlayer, tick = 0) {
         },
 
         addTower: function(playerId, tower) {
-            const playerKey = this.state.first_player.id == playerId ? 'first_player' : 'second_player';
+            const player = this.getPlayerById(playerId);
 
-            this.state[playerKey].towers.list.push(tower);
+            player.towers.list.push(tower);
+        },
+
+        removePlayerLife: function(playerId) {
+            const player = this.getPlayerById(playerId);
+
+            player.life -= 1;
         },
 
         getRandomTowerType: function(player) {
-            const totalTowerTypes = player.towerTypes.length;
+            const totalTowerTypes = player.selectedTowerTypes.length;
             
             // Index é um valor de 0 até totalTowerTypes
             const index = Math.floor(Math.random() * totalTowerTypes);
 
-            return player.towerTypes[index];
-        }
+            return player.selectedTowerTypes[index];
+        },
+
+        getPlayerById(playerId) {
+            return match.state.first_player.id == playerId ? match.state.first_player : match.state.second_player;
+        },  
     }
 
     return match;
@@ -118,11 +144,18 @@ function createMatchPlayer(player) {
         id: player._id,
         username: player.username,
         name: player.name,
-        towerTypes: player.towerTypes,
+        unlockedTowerTypes: player.unlockedTowerTypes,
+        selectedTowerTypes: player.selectedTowerTypes,
         life: 3,
         price: 100,
         money: 350,
-        total_tier: 0,
+        totalTier: 0,
+        base: {
+            position: {
+                x: 100,
+                y: 50
+            }
+        },
         enemies: {
             count: 0,
             list: []
