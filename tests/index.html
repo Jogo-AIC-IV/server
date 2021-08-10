@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=deive-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Nova+Round&display=swap" rel="stylesheet">
+        <link href="./styles.css" rel="stylesheet">
+        <title>PIXI JS</title>
+    </head>
+    <body>
+
+        <div class="container">
+            <h2>Tower defense</h2>
+
+            <canvas id="tutorial" width="500" height="250"></canvas>
+
+            <button onclick="onClick(this)" id="SEARCH_MATCH">Search</button>
+            <button class="d-none" onclick="onClick(this)" id="SEARCH_STOP">Stop</button>
+            <button class="d-none" onclick="onClick(this)" id="ADD_TOWER">Add tower</button>
+            <button class="d-none" onclick="onClick(this)" id="ADD_ENEMY">Add Enemy</button>
+            <button class="d-none" onclick="upTowerType('6109d182fa72e6a02f2f4723')" id="UP_TOWER_TYPE">Up tower type</button>
+            <button class="d-none" onclick="onClick(this)" id="QUIT_MATCH">Quit match</button>
+
+            <h2>Login</h2>
+            <form id='login' onsubmit="event.preventDefault(); login(this);">
+                <input type="text" name='username' placeholder='Username'>
+                <input type="text" name='password' placeholder='Senha'>
+
+                <button type="submit">Entrar</button>
+            </form>
+
+            <h2>Cadastro</h2>
+            <form id='signup' onsubmit="event.preventDefault(); signup(this);">
+                <input type="text" name='username' placeholder='Username'>
+                <input type="text" name='password' placeholder='Senha'>
+
+                <button type="submit">Cadastrar</button>
+            </form>
+
+            <h2>Adicionar Tower Type</h2>
+            <form id='tower_type' onsubmit="event.preventDefault(); towerType(this);">
+                <input type="text" name='name' placeholder='Name'>
+                <select name='effect'>
+                    <option value='slow'>Slow</option>
+                    <option value='burn'>Burn</option>
+                </select>
+                <input type="number" name='price' placeholder='Price'>
+                <input type="number" name='range' placeholder='Range'>
+                <input type="number" name='rate' placeholder='Fire Rate'>
+
+                <h2>Bullet</h2>
+                <input type="number" name='size' placeholder='Size'>
+                <input type="number" name='speed' placeholder='Speed'>
+                <input type="number" name='damage' placeholder='Damage'>
+                <input type="number" name='duration' placeholder='Duration'>
+
+                <button type="submit">Cadastrar</button>
+            </form>
+        </div>
+
+        <script src="https://cdn.socket.io/4.1.2/socket.io.min.js" integrity="sha384-toS6mmwu70G0fw54EGlWWeA4z3dyJ+dlXBtSURSKN4vyRFOcxd3Bzjj/AoOwY+Rg" crossorigin="anonymous"></script>
+        <script>
+            const socket = io('http://localhost:3005');
+            let isInMatch = false;
+
+            let player = {}
+            let enemy = {} 
+
+            var canvas = document.getElementById('tutorial');
+            var ctx = canvas.getContext('2d');
+
+            function draw(x, y, r, g, b) {
+                ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                ctx.fillRect(x, y, 10, 10);
+            }
+
+            function undraw(x, y) {
+                ctx.fillStyle = "rgb(255, 255, 255)";
+                ctx.fillRect(x, y, 10, 10);
+            }
+
+            socket.on('SETUP', data => {
+                console.log('SETUP');   
+                console.log(data);
+            })
+
+            socket.on('FOUND_MATCH', data => {
+                console.log("Starting match...");
+
+                document.getElementById('SEARCH_STOP').style.display = 'none';
+                document.getElementById('QUIT_MATCH').style.display = 'block';
+                isInMatch = true;
+
+                const addTower = document.getElementById('ADD_TOWER');
+                const addEnemy = document.getElementById('ADD_ENEMY');
+                const upType = document.getElementById('UP_TOWER_TYPE');
+
+                addTower.style.display = 'block';
+                addEnemy.style.display = 'block';
+                upType.style.display = 'block';
+                
+                console.log(data);
+            })
+
+            socket.on('START_MATCH', data => {
+                console.log("Match started...");
+                console.log(data);
+            })
+
+            socket.on('PLAYER_LOST_LIFE', ({ player }) => {
+                console.log("Player lost life");
+                console.log(player);
+            })
+
+            socket.on('PLAYER_DIED', ({ player }) => {
+                console.log("Player died");
+                console.log(player);
+            })
+
+
+            socket.on('ERROR', data => {
+                console.log(`Error:\t${data.type}\t${data.message}`);
+            })
+
+            socket.on('INFO', data => {
+                console.log(`Info:\t${data.status}\t${data.message}`);
+                console.log(data.message)
+            })
+
+            socket.on('TOWER_SHOT', data => {
+                console.log("Tower Shot...");
+                console.log(data);
+            })
+
+            socket.on('MATCH_STATE', match => {
+                console.log(match);
+
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+                const firstPlayer = match.first_player;
+                const secondPlayer = match.second_player;
+
+                const firstPlayerTowers = firstPlayer.towers.list;
+                const firstPlayerEnemies = firstPlayer.enemies.list;
+
+                const secondPlayerTowers = secondPlayer.towers.list;
+                const secondPlayerEnemies = secondPlayer.enemies.list;
+
+                for (let i=0; i<firstPlayerTowers.length; i++) {
+                    draw(firstPlayerTowers[i].position.x, firstPlayerTowers[i].position.y, 0, 255, 0);
+                }
+
+                for (let i=0; i<secondPlayerTowers.length; i++) {
+                    draw(secondPlayerTowers[i].position.x, secondPlayerTowers[i].position.y, 255, 255, 0);
+                }
+
+                for (let i=0; i<firstPlayerEnemies.length; i++) {
+                    draw(firstPlayerEnemies[i].position.current.x, firstPlayerEnemies[i].position.current.y, 255, 0, 0);
+                }
+
+                for (let i=0; i<secondPlayerEnemies.length; i++) {
+                    draw(secondPlayerEnemies[i].position.current.x, secondPlayerEnemies[i].position.current.y, 255, 0, 255);
+                }
+            })
+
+            socket.on('SETUP_MATCH', data => {
+                document.getElementById('SEARCH_STOP').style.display = 'none';
+                document.getElementById('QUIT_MATCH').style.display = 'block';
+                isInMatch = true;
+
+                const addTower = document.getElementById('ADD_TOWER');
+
+                addTower.style.display = 'block';
+
+                console.log(`SETUP_MATCH`); 
+                console.log(data);
+            })
+
+            socket.on('TOWER_ADDED', data => {
+                console.log('Tower added successfully');
+                console.log(data)
+            })
+
+            socket.on('ENEMY_ADDED', data => {
+                console.log('Enemy added successfully');
+                console.log(data)
+            })
+
+            socket.on('TOWER_TYPE_UP', data => {
+                console.log("Tower type up")
+                console.log(data)
+            })
+
+            socket.on('FINISH_MATCH', ({ quit }) => {
+                document.getElementById('SEARCH_MATCH').style.display = 'block';
+                document.getElementById('QUIT_MATCH').style.display = 'none';
+                document.getElementById('ADD_TOWER').style.display = 'none';
+
+
+                console.log('Match finished');
+            })
+
+            function onClick(button) {
+                const id = button.id;
+
+                console.log(id);
+
+                socket.emit(id);
+
+                if (id == 'SEARCH_MATCH') {
+                    document.getElementById('SEARCH_STOP').style.display = 'block';
+                } else if (id == 'SEARCH_STOP') {
+                    document.getElementById('SEARCH_STOP').style.display = 'none';
+                } else if (id == 'QUIT_MATCH') {
+                    document.getElementById('QUIT_MATCH').style.display = 'none';
+                }
+            }
+
+            function login(form) {
+                const username = form.querySelector('input[name="username"]').value;
+                const password = form.querySelector('input[name="password"]').value;
+
+                socket.emit('LOGIN', {username, password});
+
+                console.log(username, password)
+            }
+
+            function signup(form) {
+                const username = form.querySelector('input[name="username"]').value;
+                const password = form.querySelector('input[name="password"]').value;
+
+                socket.emit('SIGNUP', {username, password});
+
+                console.log(username, password)
+            }
+
+            function towerType(form) {
+                const size = form.querySelector('input[name="size"]').value;
+                const speed = form.querySelector('input[name="speed"]').value;
+                const damage = form.querySelector('input[name="damage"]').value;
+                const duration = form.querySelector('input[name="duration"]').value;
+
+                const bullet = {
+                    size,
+                    speed,
+                    damage,
+                    duration
+                }
+
+                const name = form.querySelector('input[name="name"]').value;
+                const effect = form.querySelector('select').value;
+                const price = form.querySelector('input[name="price"]').value;
+                const range = form.querySelector('input[name="range"]').value;
+                const rate = form.querySelector('input[name="rate"]').value;
+
+                const towerType = {
+                    name,
+                    effect,
+                    price,
+                    range,
+                    rate,
+                    bullet
+                }
+
+                console.log("Adicionando towerType");
+                console.log(towerType);
+
+                socket.emit('ADD_TOWER_TYPE', towerType)
+            }
+
+            function upTowerType(id) {
+                console.log("Upping tower Type")
+                socket.emit('UP_TOWER_TYPE', { tower_type_id: id }) 
+            }
+
+        </script>
+    </body>
+</html>
