@@ -12,18 +12,7 @@ function createTower(towerType = null, x = null, y = null) {
             y: y || 50,
             angle: 2,
         },
-        type: towerType || {
-            price: 300,
-            range: 900,
-            rate: 3,
-            color: [255, 255, 255],
-            bullet: {
-                size: 5,
-                speed: 10,
-                damage: 1,
-                duration: 10,
-            }
-        },
+        type: towerType,
         effects: {},
 
         enemyIsInRange: function(enemy) {

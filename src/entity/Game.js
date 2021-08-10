@@ -11,12 +11,13 @@ function createGame(mainSocket) {
     return {
         io: mainSocket,
         tick: 0,
-        tickRate: 1000,               // Tempo em ms de cada tick
+        tickRate: 500,               // Tempo em ms de cada tick
         playersOnline: {},            // socketId => player
         playersSearching: {},         // socketId => player
         playerMap: {},                // playerId => socket
         matches: {},                  // Todas as partidas que estão em execução no momento. matchId => match
         inMatch: {},                  // Mapeamento dos dois sockets dos players para o id da partida. socketId => matchId
+        towerTypes: {},               // towerTypeId => towerType (objeto)
 
         getRandomPlayerSearching: function(blacklistId = null) {
             if (debug) {
@@ -52,16 +53,14 @@ function createGame(mainSocket) {
             return this.playersOnline[socketId];
         },
 
-        getSetup: async function() {
-            const towerTypes = await TowerTypeModel.find().exec()
-
+        getSetup: function() {
             return {
-                tower_types: towerTypes,
+                tower_types: this.towerTypes,
             };
         },
 
         startMatch: function(firstPlayer, secondPlayer) {
-            const match = createMatch(this.io, firstPlayer, secondPlayer);
+            const match = createMatch(firstPlayer, secondPlayer);
         
             const firstPlayerSocketId = this.playerMap[firstPlayer._id].id;
             const secondPlayerSocketId = this.playerMap[secondPlayer._id].id;
@@ -142,8 +141,16 @@ function createGame(mainSocket) {
             delete this.matches[matchId];
         },
 
-        start: function() {
+        start: async function() {
             Colors.printColored('FgMagenta', 'Starting game');
+            Colors.printColored('FgMagenta', 'Loading towerTypes...');
+
+            const towerTypes = await TowerTypeModel.find().exec()
+
+            towerTypes.forEach(towerType => {
+                Colors.printColored('FgMagenta', `Loaded ${towerType.name}.\tDamage: ${towerType.bullet.damage}.\tEffect: ${towerType.effect}`);
+                this.towerTypes[towerType.id] = towerType
+            });
 
             var that = this
             setInterval(function() {
@@ -155,7 +162,7 @@ function createGame(mainSocket) {
             // console.log(`Runing a game tick`);
 
             for (let matchId in this.matches) {
-                this.matches[matchId].runTurn(this.tick);
+                this.runMatchTurn(this.matches[matchId])
 
                 this.io.to(matchId).emit('MATCH_STATE', this.matches[matchId].state);
             }
@@ -164,6 +171,113 @@ function createGame(mainSocket) {
             this.tick = this.tick >= 1000 ? 0 : this.tick + 1;
         },
 
+        runMatchTurn: function(match) {
+            console.log(`Ticking match '${match.id}' tick ${this.tick}`);
+
+            if (match.startTick > 0) {
+                console.log(`Iniciando partida '${match.id}' em ${match.startTick} ticks`);
+                match.startTick--;
+                return;
+            }
+
+            const firstPlayer = match.state.first_player;
+            const secondPlayer = match.state.second_player;
+
+            this.runMatchPlayerTurn(match, firstPlayer);
+            this.runMatchPlayerTurn(match, secondPlayer);
+        },
+
+        runMatchPlayerTurn: function(match, player) {
+
+            // Tower 
+
+            for (let i=0; i<player.towers.list.length; i++) {
+                const tower = player.towers.list[i];
+
+                Colors.printColored('FgGreen', `\nTicking '${player.username}' tower`);
+
+                Colors.printColored('FgGreen', `\n   Tower:\t`);
+                console.log(`\tFire Rate:\t${tower.type.rate}`);
+                console.log(`\tPosition:\t${tower.position.x}, ${tower.position.y}`);
+                console.log(`\tDamage:\t${tower.type.bullet.damage}`);
+                if (tower.target) {
+                    Colors.printColored('FgGreen', `\tTarget:\t${tower.target.name}`);
+                } else {
+                    console.log(`\tTarget:\t${tower.target ? tower.target.name : null}`);
+                }
+
+                if (this.tick % tower.type.rate == 0) {
+                    if (!tower.target || tower.targetIsInRange() == false) {
+                        Colors.printColored(`FgRed`, `\t\tSearching target...`);
+                        tower.findTarget(player.enemies.list);
+                    }
+
+                    if (tower.target) {
+
+                        this.io.to(match.id).emit('TOWER_SHOT', {
+                            tower: {
+                                id: tower.id,
+                                target: {
+                                    id: tower.target.id,
+                                    name: tower.target.name,
+                                    life: {
+                                        current: tower.target.life.current,
+                                        total: tower.target.life.total
+                                    } 
+                                }
+                            },
+                        })
+
+                        tower.doDamage();
+                        tower.applyEffect();
+    
+                        if (tower.target.isDead()) {
+                            Colors.printColored('FgRed', `\nTarget '${tower.target.name}' died`);
+                            tower.target.reset();
+                            tower.target = null;
+                        }
+                    } 
+                }
+            }
+
+            // Enemy 
+
+            for (let j=0; j<player.enemies.list.length; j++) {
+                const enemy = player.enemies.list[j];
+
+                Colors.printColored('FgCyan', `\nTicking '${player.username}' enemy '${enemy.name}'`);
+
+                enemy.tickEffects();
+                enemy.moveToNextPathUsingSpeed();
+
+                if (enemy.arrivedFinal) {
+                    enemy.arrivedFinal = false;
+
+                    match.removePlayerLife(player.id)
+
+                    this.io.to(match.id).emit('PLAYER_LOST_LIFE', {
+                        player: {
+                            id: player.id,
+                            username: player.username,
+                            life: player.life
+                        }
+                    })
+
+                    if (match.playerDied(player.id)) {
+                        this.io.to(match.id).emit('PLAYER_DIED', {
+                            player: {
+                                id: player.id,
+                                username: player.username,
+                                life: player.life
+                            }
+                        })
+
+                        this.finishMatch(match.id)
+                    }
+                }
+            }
+        },
+        
         // Helpers
 
         playerIsInMatch: function(socketId) {

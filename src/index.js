@@ -23,8 +23,7 @@ Game.start();
 io.on('connection', async (socket) => {
     console.log(`Socket '${socket.id}' connected`)
 
-    const setup = await Game.getSetup();
-    
+    const setup = Game.getSetup();
     socket.emit('SETUP', { connected: true, setup });
 
     // Todas categorias dos eventos 

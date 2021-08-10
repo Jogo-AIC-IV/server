@@ -6,10 +6,12 @@ function createEnemy(name = null) {
         id: uuidv4(),
         name: name || 'Default',
         level: 1,
+        arrivedFinal: false,
         position: {
             start: null,
             current: null,
-            target: null
+            target: null,
+            final: null,
         },
         effects: {},
         speed: {
@@ -22,21 +24,19 @@ function createEnemy(name = null) {
         },
         path: [
             {x: 10, y: 10, angle: 1}, 
-            {x: 20, y: 20, angle: 1}, 
-            {x: 30, y: 20, angle: 1.5}, 
-            {x: 40, y: 20, angle: 1.5}, 
-            {x: 60, y: 30, angle: 1.5},
-            {x: 70, y: 30, angle: 1.5},
-            {x: 80, y: 30, angle: 1.5},
-            {x: 90, y: 30, angle: 1.5},
-            {x: 100, y: 40, angle: 1.5},
+            {x: 100, y: 10, angle: 1}, 
+            {x: 100, y: 50, angle: 1.5}, 
+            {x: 200, y: 50, angle: 1.5}, 
+            {x: 200, y: 150, angle: 1.5},
+            {x: 150, y: 150, angle: 1.5},
         ],
 
         initialize: function() {
             this.position = {
-                start: {...this.path[0]},
-                current: {...this.path[0]},
-                target: { ...this.path[1], index: 0 }
+                start: { ...this.path[0] },
+                current: { ...this.path[0] },
+                target: { ...this.path[1], index: 0 },
+                final: { ...this.path[this.path.length - 1] },
             };
         },
 
@@ -67,6 +67,8 @@ function createEnemy(name = null) {
             this.position.target.index += 1;
 
             if (this.position.target.index >= this.path.length) {
+                this.arrivedFinal = true;
+
                 this.reset();
                 
                 this.position.target.index = 0;

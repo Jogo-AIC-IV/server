@@ -21,6 +21,29 @@ const Effects = {
             console.log(`\tSlow tick '${this.totalTicks}'`);
             this.totalTicks--;
         } 
+    },
+
+    burn: {
+        totalTicks: 5,
+        damage: 2,
+
+        apply: function(target) {
+            target.effects['burn'] = this;
+            console.log(`\tBurning enemy ${target.name}`);
+        },
+
+        remove: function(target) {
+            console.log(`\tRemoving burn from ${target.name}`);
+
+            delete target.effects['burn'];
+        },
+
+        tick: function(target) {
+            console.log(`\tBurn tick '${this.totalTicks}'`);
+            this.totalTicks--;
+
+            target.life.current -= this.damage
+        } 
     }
 }
 
