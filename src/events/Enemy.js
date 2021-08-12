@@ -16,7 +16,6 @@ function add() {
 
     const socketId = this.socket.id;
     const matchId = this.game.inMatch[socketId];
-    const match = this.game.matches[matchId]
     const player = this.game.getPlayerInMatchBySocketId(matchId, socketId);
 
     if (!player) {
@@ -26,11 +25,11 @@ function add() {
 
     const enemy = createEnemy('Mage');
     
-    match.addEnemy(player.id, enemy);
+    player.addEnemy(enemy);
 
     console.log(`\tCreating enemy ${enemy.name}`);
 
-    this.game.io.to(matchId).emit('ENEMY_ADDED', { 
+    this.game.emitToMatch(matchId,'ENEMY_ADDED', { 
         player: {
             id: player.id,
             username: player.username,

@@ -14,25 +14,25 @@ const Match = function (game, socket) {
 // Events
 
 function search() {
-    const player = this.game.getPlayerBySocketId(this.socket.id);
+    const user = this.game.getUserBySocketId(this.socket.id);
 
-    Colors.printColored('FgGreen', `Player '${player.username}' started searching`);
+    Colors.printColored('FgGreen', `User '${user.username}' started searching`);
 
     this.game.searchMatch(this.socket.id);
 }
 
 function stop() {
-    const player = this.game.getPlayerBySocketId(this.socket.id);
+    const user = this.game.getUserBySocketId(this.socket.id);
 
-    Colors.printColored('FgGreen', `Player '${player.username}' stopped searching`);
+    Colors.printColored('FgGreen', `User '${user.username}' stopped searching`);
 
-    delete this.game.playersSearching[this.socket.id];
+    delete this.game.usersSearching[this.socket.id];
 }
 
 function quit() {
-    const player = this.game.getPlayerBySocketId(this.socket.id);
+    const user = this.game.getUserBySocketId(this.socket.id);
 
-    Colors.printColored('FgYellow', `Player '${player.username}' quited searching`);
+    Colors.printColored('FgYellow', `User '${user.username}' quited searching`);
 
     const matchId = this.game.inMatch[this.socket.id];
 

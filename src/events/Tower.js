@@ -21,7 +21,6 @@ const Tower = function (game, socket) {
 function add() {
     const socketId = this.socket.id;
     const matchId = this.game.inMatch[socketId];
-    const match = this.game.matches[matchId];
     const player = this.game.getPlayerInMatchBySocketId(matchId, socketId);
 
     if (!player) {
@@ -32,7 +31,7 @@ function add() {
     const positionX = Math.floor(Math.random() * 500)
     const positionY = Math.floor(Math.random() * 250)
 
-    const towerType = match.getRandomTowerType(player);
+    const towerType = player.getRandomTowerType();
     const tower = createTower(towerType, positionX, positionY);
 
     Colors.printColored('FgCyan', `\tPlayer '${player.username}' added tower`);
@@ -41,7 +40,7 @@ function add() {
 
     player.towers.list.push(tower);
 
-    this.game.io.to(matchId).emit('TOWER_ADDED', { 
+    this.game.emitToMatch(matchId,'TOWER_ADDED', { 
         player: {
             id: player.id,
             usename: player.username
@@ -55,7 +54,6 @@ function combine(firstTowerId, secondTowerId) {
 
     const socketId = this.socket.id;
     const matchId = this.game.inMatch[socketId];
-    const match = this.game.matches[matchId];
     const player = this.game.getPlayerInMatchBySocketId(matchId, socketId);
 
     let indexTowerDestroy = player.towers.list.findIndex(tower => (tower.id == firstTowerId));
@@ -78,14 +76,14 @@ function combine(firstTowerId, secondTowerId) {
     towerUpgrade.type.rate -= 1;
     towerUpgrade.tier += 1;
 
-    match.totalTier += 1;
-    
+    player.totalTier += 1;
     player.towers.list.splice(indexTowerDestroy, 1);
 
-    this.game.io.to(matchId).emit('TOWER_COMBINED', { 
+    this.game.emitToMatch(matchId, 'TOWER_COMBINED', { 
         player: {
             id: player.id,
-            username: player.username
+            username: player.username,
+            totalTier: player.totalTier,
         }, 
         tower_upgrade: { 
             index: indexTowerUpgrade, 
@@ -105,7 +103,7 @@ function selectTowerTypes(towerTypes) {
         return this.socket.emit('ERROR', { type: 'tower', message: 'O jogador deve escolher no mínimo 5 torres' });
     }
 
-
+    const user = this.game.getUserBySocketId()
 }
 
 async function addTowerType(data) {
@@ -137,7 +135,7 @@ function updateTowerType({ tower_type_id }) {
             towerType.bullet.speed += 4;
             towerType.bullet.size += 1;
 
-            return this.game.io.to(matchId).emit('TOWER_TYPE_UP', { 
+            return this.game.emitToMatch(matchId, 'TOWER_TYPE_UP', { 
                 player: {
                     id: player.id,
                     username: player.username

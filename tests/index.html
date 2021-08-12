@@ -15,14 +15,24 @@
         <div class="container">
             <h2>Tower defense</h2>
 
+            <div id="connection">
+                <span class="circle"></span>
+                <span class="text">Disconnected</span>
+                <span id="player" class="ml-2"></span>
+                <span id="money" class="ml-2"></span>
+            </div>
+
+
             <canvas id="tutorial" width="500" height="250"></canvas>
 
-            <button onclick="onClick(this)" id="SEARCH_MATCH">Search</button>
-            <button class="d-none" onclick="onClick(this)" id="SEARCH_STOP">Stop</button>
-            <button class="d-none" onclick="onClick(this)" id="ADD_TOWER">Add tower</button>
-            <button class="d-none" onclick="onClick(this)" id="ADD_ENEMY">Add Enemy</button>
-            <button class="d-none" onclick="upTowerType('6109d182fa72e6a02f2f4723')" id="UP_TOWER_TYPE">Up tower type</button>
-            <button class="d-none" onclick="onClick(this)" id="QUIT_MATCH">Quit match</button>
+            <div class="buttons d-flex">
+                <button class="d-none" onclick="onClick(this)" id="SEARCH_MATCH">Search</button>
+                <button class="d-none" onclick="onClick(this)" id="SEARCH_STOP">Stop</button>
+                <button class="d-none" onclick="onClick(this)" id="ADD_TOWER">Add tower</button>
+                <button class="d-none" onclick="onClick(this)" id="ADD_ENEMY">Add Enemy</button>
+                <button class="d-none" onclick="upTowerType('6109d182fa72e6a02f2f4723')" id="UP_TOWER_TYPE">Up tower type</button>
+                <button class="d-none" onclick="onClick(this)" id="QUIT_MATCH">Quit match</button>
+            </div>
 
             <h2>Login</h2>
             <form id='login' onsubmit="event.preventDefault(); login(this);">
@@ -45,7 +55,11 @@
                 <input type="text" name='name' placeholder='Name'>
                 <select name='effect'>
                     <option value='slow'>Slow</option>
+                    <option value='freeze'>Freeze</option>
                     <option value='burn'>Burn</option>
+                    <option value='bleed'>Bleed</option>
+                    <option value='poison'>Poison</option>
+                    <option value='heal'>Heal</option>
                 </select>
                 <input type="number" name='price' placeholder='Price'>
                 <input type="number" name='range' placeholder='Range'>
@@ -82,9 +96,35 @@
                 ctx.fillRect(x, y, 10, 10);
             }
 
+            socket.on('disconnect', () => {
+                document.getElementById('SEARCH_MATCH').style.display = 'none';
+
+                const connection = document.getElementById('connection');
+
+                connection.querySelector('.circle').style.background = 'red';
+                connection.querySelector('.text').innerHTML = 'Disconnected';
+            })
+
             socket.on('SETUP', data => {
                 console.log('SETUP');   
                 console.log(data);
+
+
+                const connection = document.getElementById('connection');
+
+                connection.querySelector('.circle').style.background = 'green';
+                connection.querySelector('.text').innerHTML = 'Connected';
+            })
+
+
+            socket.on('PLAYER_LOGIN', ({ status, message }) => {
+
+                if (!status) {
+                    return document.getElementById('player').innerHTML = message
+                }
+
+                document.getElementById('SEARCH_MATCH').style.display = 'block';
+                document.getElementById('player').innerHTML = message.username
             })
 
             socket.on('FOUND_MATCH', data => {
@@ -120,6 +160,11 @@
                 console.log(player);
             })
 
+            socket.on('ENEMY_DIED', ({ player, enemy }) => {
+                console.log("Enemy died");
+
+                document.getElementById('money').innerHTML = `Money: ${player.money}`
+            })
 
             socket.on('ERROR', data => {
                 console.log(`Error:\t${data.type}\t${data.message}`);

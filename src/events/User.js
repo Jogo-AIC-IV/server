@@ -1,5 +1,4 @@
 const Colors = require("../constants/TerminalColors");
-const createUser = require("../entity/User");
 const UserService = require('../service/User')();
 
 const User = function (game, socket) {
@@ -19,8 +18,8 @@ async function login({ username, password }) {
     Colors.printColored('FgGreen', `Usuário '${username}' com senha '${password}' tentando logar`);
 
     // Verifica se o player está online 
-    for (let socketId in this.game.playersOnline) {
-        if (this.game.playersOnline[socketId].username == username) {
+    for (let socketId in this.game.usersOnline) {
+        if (this.game.usersOnline[socketId].username == username) {
             return this.socket.emit('ERROR', { type: 'player', message: 'Esse usuário já está logado.' });
         }    
     }
@@ -28,21 +27,21 @@ async function login({ username, password }) {
     const user = await UserService.login(username, password);
 
     if (!user) {
-        return this.socket.emit('ERROR', { type: 'player', message: 'Username ou senha incorretos.' });
+        return this.socket.emit('PLAYER_LOGIN', { status: false, message: 'Usuário ou senha inválidos.' });
     }
 
     this.game.playerMap[user._id] = this.socket;
-    this.game.playersOnline[this.socket.id] = user;
+    this.game.usersOnline[this.socket.id] = user;
 
-    return this.socket.emit('INFO', { status: true, message: user });
+    return this.socket.emit('PLAYER_LOGIN', { status: true, message: user });
 }
 
 async function signup(data) {
     Colors.printColored('FgGreen', `Usuário '${data.username}' com senha '${data.password}' tentando cadastrar`);
 
     // Verifica se o player está online 
-    for (let socketId in this.game.playersOnline) {
-        if (this.game.playersOnline[socketId].username == data.username) {
+    for (let socketId in this.game.usersOnline) {
+        if (this.game.usersOnline[socketId].username == data.username) {
             return this.socket.emit('ERROR', { type: 'player', message: 'Esse usuário já existe e está logado.' });
         }    
     }
@@ -54,7 +53,7 @@ async function signup(data) {
     }
 
     this.game.playerMap[user.id] = this.socket;
-    this.game.playersOnline[this.socket.id] = user;
+    this.game.usersOnline[this.socket.id] = user;
 
     return this.socket.emit('INFO', { status: true, message: 'Cadastro realizado com sucesso.' });
 }
@@ -62,7 +61,7 @@ async function signup(data) {
 function disconnect() {
     Colors.printColored('FgRed', `Socket '${this.socket.id}' disconnected`);
 
-    const user = this.game.getPlayerBySocketId(this.socket.id);
+    const user = this.game.getUserBySocketId(this.socket.id);
     const matchId = this.game.inMatch[this.socket.id];
 
     if (user) {
@@ -75,8 +74,8 @@ function disconnect() {
         this.game.finishMatch(matchId);
     }
     
-    delete this.game.playersOnline[this.socket.id];
-    delete this.game.playersSearching[this.socket.id];
+    delete this.game.usersOnline[this.socket.id];
+    delete this.game.usersSearching[this.socket.id];
 
     console.log(this.game.matches);
 }

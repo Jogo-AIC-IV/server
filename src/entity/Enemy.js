@@ -6,6 +6,7 @@ function createEnemy(name = null) {
         id: uuidv4(),
         name: name || 'Default',
         level: 1,
+        money: 20,
         arrivedFinal: false,
         position: {
             start: null,
@@ -74,14 +75,14 @@ function createEnemy(name = null) {
                 this.position.target.index = 0;
             }
 
-            const tempPath = this.getcurrentPathIndex();
+            const tempPath = this.getCurrentPathIndex();
 
             this.position.target.x = tempPath.x;
             this.position.target.y = tempPath.y;
             this.position.target.angle = tempPath.angle;
         },
 
-        getcurrentPathIndex: function() {
+        getCurrentPathIndex: function() {
             return this.path[this.position.target.index];
         },
 

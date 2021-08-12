@@ -46,3 +46,26 @@ button:hover {
 .d-none {
     display: none;
 }
+
+.d-flex {
+    display: flex;
+}
+
+.ml-2 {
+    margin-left: 1.5rem;
+}
+
+#connection {
+    font-family: 'Roboto';
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+#connection .circle {
+    height: 15px;
+    width: 15px;
+    background: red;
+    border-radius: 50%;
+    display: inline-block;
+    border: 1px solid #757575;
+}
