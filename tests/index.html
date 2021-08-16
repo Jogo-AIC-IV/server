@@ -36,40 +36,45 @@
 
             <h2>Login</h2>
             <form id='login' onsubmit="event.preventDefault(); login(this);">
-                <input type="text" name='username' placeholder='Username'>
-                <input type="text" name='password' placeholder='Senha'>
+                <input type="text" name='username' placeholder='Username' required>
+                <input type="text" name='password' placeholder='Senha' required>
 
                 <button type="submit">Entrar</button>
             </form>
 
             <h2>Cadastro</h2>
             <form id='signup' onsubmit="event.preventDefault(); signup(this);">
-                <input type="text" name='username' placeholder='Username'>
-                <input type="text" name='password' placeholder='Senha'>
+                <input type="text" name='username' placeholder='Username' required>
+                <input type="text" name='password' placeholder='Senha' required>
 
                 <button type="submit">Cadastrar</button>
             </form>
 
             <h2>Adicionar Tower Type</h2>
             <form id='tower_type' onsubmit="event.preventDefault(); towerType(this);">
-                <input type="text" name='name' placeholder='Name'>
-                <select name='effect'>
-                    <option value='slow'>Slow</option>
-                    <option value='freeze'>Freeze</option>
-                    <option value='burn'>Burn</option>
-                    <option value='bleed'>Bleed</option>
-                    <option value='poison'>Poison</option>
-                    <option value='heal'>Heal</option>
+                <input type="text" name='name' placeholder='Name' required>
+                <select id="effects" name='effect' required>
+                    <option value="" disabled selected>Efeito</option>
                 </select>
-                <input type="number" name='price' placeholder='Price'>
-                <input type="number" name='range' placeholder='Range'>
-                <input type="number" name='rate' placeholder='Fire Rate'>
+                <input type="number" name='price' placeholder='Price' required>
+                <input type="number" name='range' placeholder='Range' required>
+                <input type="number" name='rate' placeholder='Fire Rate' required>
+
+                <label for="isDefault">Default</label>
+                <input type="checkbox" name='isDefault'>
 
                 <h2>Bullet</h2>
-                <input type="number" name='size' placeholder='Size'>
-                <input type="number" name='speed' placeholder='Speed'>
-                <input type="number" name='damage' placeholder='Damage'>
-                <input type="number" name='duration' placeholder='Duration'>
+                <input type="number" name='size' placeholder='Size' required>
+                <input type="number" name='speed' placeholder='Speed' required>
+                <input type="number" name='damage' placeholder='Damage' required>
+                <input type="number" name='duration' placeholder='Duration' required>
+
+                <button type="submit">Cadastrar</button>
+            </form>
+
+            <h2>Selecionar Tower Types</h2>
+            <form id='select_tower_type' onsubmit="event.preventDefault(); selectTowerTypes(this);">
+                <span>Desbloqueados:&nbsp;</span>
 
                 <button type="submit">Cadastrar</button>
             </form>
@@ -79,6 +84,7 @@
         <script>
             const socket = io('http://localhost:3005');
             let isInMatch = false;
+            let effectsApplied = false;
 
             let player = {}
             let enemy = {} 
@@ -105,19 +111,24 @@
                 connection.querySelector('.text').innerHTML = 'Disconnected';
             })
 
-            socket.on('SETUP', data => {
+            socket.on('SETUP', ({ setup }) => {
                 console.log('SETUP');   
-                console.log(data);
-
+                console.log(setup);
 
                 const connection = document.getElementById('connection');
 
                 connection.querySelector('.circle').style.background = 'green';
                 connection.querySelector('.text').innerHTML = 'Connected';
+
+                if (!effectsApplied) {
+                    loadEffects(setup.effects);
+                    effectsApplied = true;
+                }
             })
 
 
             socket.on('PLAYER_LOGIN', ({ status, message }) => {
+                console.log(message);
 
                 if (!status) {
                     return document.getElementById('player').innerHTML = message
@@ -125,6 +136,8 @@
 
                 document.getElementById('SEARCH_MATCH').style.display = 'block';
                 document.getElementById('player').innerHTML = message.username
+                
+                loadPlayerTowerTypes(message.unlockedTowerTypes);
             })
 
             socket.on('FOUND_MATCH', data => {
@@ -287,6 +300,7 @@
                 const speed = form.querySelector('input[name="speed"]').value;
                 const damage = form.querySelector('input[name="damage"]').value;
                 const duration = form.querySelector('input[name="duration"]').value;
+                const isDefault = form.querySelector('input[name="isDefault"]:checked') ? true : false;
 
                 const bullet = {
                     size,
@@ -307,6 +321,7 @@
                     price,
                     range,
                     rate,
+                    isDefault,
                     bullet
                 }
 
@@ -316,9 +331,56 @@
                 socket.emit('ADD_TOWER_TYPE', towerType)
             }
 
+            function selectTowerTypes(form) {
+                const inputs = form.querySelectorAll('input[type="checkbox"]:checked');
+                const towerTypesId = []
+
+                for (let i=0; i<inputs.length; i++) {
+                    const input = inputs[i]
+                    const towerTypeId = input.name
+
+                    towerTypesId.push(towerTypeId)
+                }
+
+                socket.emit('SELECT_TOWER_TYPES', { towerTypesId })
+            }
+
             function upTowerType(id) {
                 console.log("Upping tower Type")
-                socket.emit('UP_TOWER_TYPE', { tower_type_id: id }) 
+                socket.emit('UPGRADE_TOWER_TYPE', { towerTypeId: id }) 
+            }
+
+            function loadEffects(effects) {
+
+                const select = document.getElementById('effects');
+
+                for (effect in effects) {
+                    const option = document.createElement('option')
+    
+                    option.value = effects[effect]
+                    option.innerHTML = effects[effect]
+
+                    select.appendChild(option);
+                }
+            }
+
+            function loadPlayerTowerTypes(towerTypes) {
+                console.log(towerTypes)
+                
+                const formSelect = document.getElementById('select_tower_type')
+            
+                for (towerType in towerTypes) {
+                    const label = document.createElement('label')
+                    label.setAttribute("for", towerTypes[towerType].id);
+                    label.innerHTML = towerTypes[towerType].name
+
+                    const input = document.createElement('input')
+                    input.type = 'checkbox'
+                    input.name = towerTypes[towerType].id
+
+                    formSelect.appendChild(input)
+                    formSelect.appendChild(label)
+                }
             }
 
         </script>

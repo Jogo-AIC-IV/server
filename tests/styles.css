@@ -1,3 +1,8 @@
+html, body {
+    height: 100%;
+    margin-bottom: 200px;
+}
+
 h1, h2 {
     font-family: Arial, Helvetica, sans-serif;
 }
@@ -36,6 +41,11 @@ button {
 button:hover {
     cursor: pointer;
     opacity: 0.8;
+}
+
+#select_tower_type label {
+    font-weight: bold;
+    margin-right: 15px;
 }
 
 .container {

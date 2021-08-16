@@ -6,6 +6,11 @@ const TowerTypeSchema = new mongoose.Schema({
         default: 'Mage',
         required: true
     },
+    isDefault: {
+        type: Boolean,
+        default: false,
+        required: true,
+    },
     effect: {
         type: String,
         default: 'slow',

@@ -1,5 +1,5 @@
 const Colors = require("../constants/TerminalColors");
-const UserService = require('../service/User')();
+const UserService = require('../service/UserService')();
 
 const User = function (game, socket) {
     this.game = game;

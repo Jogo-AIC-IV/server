@@ -96,6 +96,18 @@ function createPlayer(user) {
             return null;
         },
 
+        getTowerTypeById: function(towerTypeId) {
+            const types = this.towers.types;
+
+            for(let i=0; i<types.length; i++) {
+                if (types[i].id == towerTypeId) {
+                    return types[i];
+                }
+            }
+
+            return null;
+        }
+
     }
 }
 

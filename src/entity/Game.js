@@ -1,8 +1,7 @@
 const createMatch = require('./Match')
-const TowerTypeModel = require('../models/TowerType');
-const createEnemy = require('./Enemy');
 const Effects = require('../constants/Effects');
 const Colors = require('../constants/TerminalColors');
+const TowerTypeService = require('../service/TowerTypeService')();
 
 const debug = false;
 
@@ -55,6 +54,7 @@ function createGame(mainSocket) {
 
         getSetup: function() {
             return {
+                effects: Object.keys(Effects),
                 tower_types: this.towerTypes,
             };
         },
@@ -139,12 +139,14 @@ function createGame(mainSocket) {
             Colors.printColored('FgMagenta', 'Starting game');
             Colors.printColored('FgMagenta', 'Loading towerTypes...');
 
-            const towerTypes = await TowerTypeModel.find().exec()
+            const towerTypes = await TowerTypeService.getAll();
 
-            towerTypes.forEach(towerType => {
-                Colors.printColored('FgMagenta', `Loaded ${towerType.name}.\tDamage: ${towerType.bullet.damage}.\tEffect: ${towerType.effect}`);
-                this.towerTypes[towerType.id] = towerType
-            });
+            if (towerTypes) {
+                towerTypes.forEach(towerType => {
+                    Colors.printColored('FgMagenta', `Loaded ${towerType.name}.\tDamage: ${towerType.bullet.damage}.\tEffect: ${towerType.effect}`);
+                    this.towerTypes[towerType.id] = towerType
+                });
+            }
 
             var that = this
             setInterval(function() {

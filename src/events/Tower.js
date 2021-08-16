@@ -1,7 +1,5 @@
 const Colors = require('../constants/TerminalColors');
 const createTower = require('../entity/Tower');
-const TowerType = require('../models/TowerType');
-const towerTypeModel = require('../models/TowerType');
 
 const Tower = function (game, socket) {
     this.game = game;
@@ -10,9 +8,6 @@ const Tower = function (game, socket) {
     this.handler = {
         ADD_TOWER:     add.bind(this),
         COMBINE_TOWER: combine.bind(this),
-        SELECT_TOWER_TYPES: selectTowerTypes.bind(this),
-        ADD_TOWER_TYPE: addTowerType.bind(this),
-        UP_TOWER_TYPE: updateTowerType.bind(this),
     };
 }
 
@@ -94,61 +89,6 @@ function combine(firstTowerId, secondTowerId) {
             tower: towerDestroy
         }
     })
-}
-
-
-function selectTowerTypes(towerTypes) {
-
-    if (towerTypes.length < 5) {
-        return this.socket.emit('ERROR', { type: 'tower', message: 'O jogador deve escolher no mínimo 5 torres' });
-    }
-
-    const user = this.game.getUserBySocketId()
-}
-
-async function addTowerType(data) {
-    try {
-        await towerTypeModel.create(data);
-    
-        return this.socket.emit('INFO', { status: true, message: 'Tower type adicionado.' });
-    } catch (error) {
-        console.error(error)
-        return this.socket.emit('ERROR', { type: 'tower', message: 'Falha ao adicionar o tower type' });
-    }
-}
-
-function updateTowerType({ tower_type_id }) {
-    const socketId = this.socket.id;
-    const matchId = this.game.inMatch[socketId];
-    const player = this.game.getPlayerInMatchBySocketId(matchId, socketId);
-    const towerTypes = player.towers.types;
-
-    for(let i=0; i<towerTypes.length; i++) {
-        if (towerTypes[i].id == tower_type_id) {
-            const towerType = towerTypes[i];
-
-            console.log(`Upando tower type ${towerType.name}`);
-
-            towerType.range += 10
-            towerType.rate -= 1
-            towerType.bullet.damage += 1;
-            towerType.bullet.speed += 4;
-            towerType.bullet.size += 1;
-
-            return this.game.emitToMatch(matchId, 'TOWER_TYPE_UP', { 
-                player: {
-                    id: player.id,
-                    username: player.username
-                }, 
-                tower_type: { 
-                    index: i, 
-                    type: towerType 
-                }
-            })
-        }
-    }
-
-    return this.socket.emit('ERROR', { type: 'tower', message: 'Tipo de torre não encontrado.' })
 }
 
 module.exports = Tower;
