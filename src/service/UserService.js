@@ -47,6 +47,12 @@ function UserService() {
                     return null;
                 }
 
+                console.log("\n\n\n");
+                console.log(user.selectedTowerTypes)
+                console.log("\n\n\n");
+                console.log(user.unlockedTowerTypes)
+                console.log("\n\n\n");
+
                 const unlockedTowerTypes = await TowerTypeService.getByArrayIds(user.unlockedTowerTypes);
                 const selectedTowerTypes = await TowerTypeService.getByArrayIds(user.selectedTowerTypes);
 

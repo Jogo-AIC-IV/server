@@ -27,7 +27,7 @@ async function login({ username, password }) {
     const user = await UserService.login(username, password);
 
     if (!user) {
-        return this.socket.emit('PLAYER_LOGIN', { status: false, message: 'Usuário ou senha inválidos.' });
+        return this.socket.emit('ERROR', { type: 'player', message: 'Usuário ou senha inválidos.' });
     }
 
     this.game.playerMap[user._id] = this.socket;
@@ -51,9 +51,6 @@ async function signup(data) {
     if (!user) {
         return this.socket.emit('ERROR', { type: 'player', message: 'Esse usuário já existe.' });
     }
-
-    this.game.playerMap[user.id] = this.socket;
-    this.game.usersOnline[this.socket.id] = user;
 
     return this.socket.emit('INFO', { status: true, message: 'Cadastro realizado com sucesso.' });
 }
